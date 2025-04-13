@@ -1,0 +1,14 @@
+falco: "~/data/software/falco/bin/falco"
+featureCounts: "~/data/miniforge3/bin/featureCounts"
+picard: "~/software/bin/picard"
+bamCoverage: "~/data/miniforge3/bin/bamCoverage"
+
+ref_hg_genome: "~/data/reference/Homo_sapiens/hisat_GRCh38/GRCh38"
+ref_hg_genome_fasta: "~/data/reference/Homo_sapiens/sequences/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna" 
+ref_hg38_tss_2000bp: "~/data/reference/Homo_sapiens/sequences/regulation_bed/hg38_TSS_2000bp_up.bed.saf"
+ref_hg_genome_gtf: "~/data/reference/Homo_sapiens/sequences/GCA_000001405.15_GRCh38_full_analysis_set.refseq_annotation.gtf"
+
+ref_spikein: "~/workspace/dmeseq/reference/spike_in_index"
+ref_spikein_fasta: "~/workspace/dmeseq/reference/spike_in.fa"
+ref_spikein_lambda_window: "~/workspace/dmeseq/reference/lambda_200bp_window.saf"
+ref_spikein_all: "~/workspace/dmeseq/reference/spike_in.saf"

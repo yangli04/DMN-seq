@@ -1,0 +1,144 @@
+SAMPLE = ["DME", "Input"]
+
+
+configfile: "workflow/config.yaml"
+
+include: "rules/human_genome.smk"
+include: "rules/spikein.smk"
+
+BATCH = ["S1"]
+
+wildcard_constraints:
+    sample="|".join(SAMPLE),
+
+rule all:
+    input:
+        "report_qc/report_falco_before.html",
+        "report_qc/cutadapt_PE_qc.html",
+        "report_qc/report_falco_after.html",
+        "report_qc/report_mapping_spikein.html",
+        "report_qc/report_mapping_hg_genome.html",
+        "report_qc/report_dedup_hg_genome.html",
+        "feature_counts/hg38_tss_2000bp/counts_hg38_tss_2000bp.txt",
+        "feature_counts/spikein/counts_spikein_lambda_window.txt",
+        expand("deeptools/hg_genome/plot_heatmap/{sample}.scale_region_heatmap_hg_genome.pdf", sample=SAMPLE),
+        expand("deeptools/hg_genome/plot_heatmap/{sample}.reference_point_heatmap_hg_genome.pdf", sample=SAMPLE),
+
+
+rule falco_before_PE:
+    input:
+        r1="raw_data/{sample}_S1_R1_001.fastq.gz",
+        r2="raw_data/{sample}_S1_R2_001.fastq.gz",
+    output:
+        "quality_control/falco_before/{sample}_PE_R1/fastqc_report.html",
+        "quality_control/falco_before/{sample}_PE_R1/fastqc_data.txt",
+        "quality_control/falco_before/{sample}_PE_R1/summary.txt",
+        "quality_control/falco_before/{sample}_PE_R2/fastqc_report.html",
+        "quality_control/falco_before/{sample}_PE_R2/fastqc_data.txt",
+        "quality_control/falco_before/{sample}_PE_R2/summary.txt",
+    params:
+        r1="quality_control/falco_before/{sample}_PE_R1",
+        r2="quality_control/falco_before/{sample}_PE_R2",
+        falco=config["falco"],
+    resources:
+        mem_mb=8000,
+    shell:
+        """
+        {params.falco} -o {params.r1} {input.r1}
+        {params.falco} -o {params.r2} {input.r2}
+        """
+
+
+rule report_falco_before:
+    input:
+        expand("quality_control/falco_before/{sample}_SE/fastqc_data.txt", sample=SAMPLE) if "S2" in BATCH else [],
+        expand("quality_control/falco_before/{sample}_PE_R1/fastqc_data.txt", sample=SAMPLE) if "S1" in BATCH else [],
+        expand("quality_control/falco_before/{sample}_PE_R2/fastqc_data.txt", sample=SAMPLE) if "S1" in BATCH else [],
+    output:
+        "report_qc/report_falco_before.html",
+    threads: 2
+    resources:
+        mem_mb=8000,
+    shell:
+        "multiqc -f -m fastqc -n {output} {input}"
+
+
+rule cutadapt_PE:
+    input:
+        r1="raw_data/{sample}_S1_R1_001.fastq.gz",
+        r2="raw_data/{sample}_S1_R2_001.fastq.gz",
+    output:
+        out1="cutadapt_PE/trimmed_{sample}_R1.fq.gz",
+        out2="cutadapt_PE/trimmed_{sample}_R2.fq.gz",
+        report="cutadapt_PE/report/{sample}.cut1.report",
+    threads: 4
+    resources:
+        mem_mb=6000,
+    shell:
+        """
+        cutadapt -j {threads} -e 0.2 -n 5 -O 3 -m 20 --nextseq-trim=6 --trim-n\
+            -a "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA" \
+            -A "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT" \
+            -o {output.out1}  \
+            -p {output.out2}  \
+            {input.r1} {input.r2} > {output.report}
+        """
+
+
+rule report_cutadapt_PE:
+    input:
+        expand("cutadapt_PE/report/{sample}.cut1.report", sample=SAMPLE),
+    output:
+        "report_qc/cutadapt_PE_qc.html",
+    shell:
+        "multiqc -f -m cutadapt -n {output} {input}"
+
+
+rule falco_after_PE:
+    input:
+        r1="cutadapt_PE/trimmed_{sample}_R1.fq.gz",
+        r2="cutadapt_PE/trimmed_{sample}_R2.fq.gz",
+    output:
+        "quality_control/falco_after/{sample}_PE_R1/fastqc_report.html",
+        "quality_control/falco_after/{sample}_PE_R1/fastqc_data.txt",
+        "quality_control/falco_after/{sample}_PE_R1/summary.txt",
+        "quality_control/falco_after/{sample}_PE_R2/fastqc_report.html",
+        "quality_control/falco_after/{sample}_PE_R2/fastqc_data.txt",
+        "quality_control/falco_after/{sample}_PE_R2/summary.txt",
+    params:
+        r1="quality_control/falco_after/{sample}_PE_R1",
+        r2="quality_control/falco_after/{sample}_PE_R2",
+        falco=config["falco"],
+    resources:
+        mem_mb=8000,
+    shell:
+        """
+        {params.falco} -o {params.r1} {input.r1}
+        {params.falco} -o {params.r2} {input.r2}
+        """
+
+
+rule report_falco_after:
+    input:
+        expand(
+            "quality_control/falco_after/{sample}_SE/fastqc_data.txt", sample=SAMPLE
+        )
+        if "S2" in BATCH
+        else [],
+        expand(
+            "quality_control/falco_after/{sample}_PE_R1/fastqc_data.txt", sample=SAMPLE
+        )
+        if "S1" in BATCH
+        else [],
+        expand(
+            "quality_control/falco_after/{sample}_PE_R2/fastqc_data.txt", sample=SAMPLE
+        )
+        if "S1" in BATCH
+        else [],
+    output:
+        "report_qc/report_falco_after.html",
+    threads: 2
+    resources:
+        mem_mb=8000,
+    shell:
+        "multiqc -f -m fastqc -n {output} {input}"

@@ -1,0 +1,20 @@
+cluster:
+  mkdir -p logs/{rule} && sbatch --job-name={rule}-{wildcards} --output=logs/{rule}/out.{rule}-{wildcards}-%j --error=logs/{rule}/err.{rule}-{wildcards}-%j --account=pi-drpepper --time={resources.time} --partition={resources.partition} --nodes=1 --ntasks-per-node={threads} --mem-per-cpu={resources.mem_mb}
+
+default-resources:
+    - partition=caslake
+    - time="36:00:00"
+    - nodes=1
+    - threads=1
+    - mem_mb=20000
+restart-times: 3
+max-jobs-per-second: 10
+max-status-checks-per-second: 1
+local-cores: 1
+latency-wait: 60
+jobs: 500
+keep-going: True
+rerun-incomplete: True
+printshellcmds: True
+scheduler: greedy
+use-conda: True

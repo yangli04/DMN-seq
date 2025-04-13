@@ -1,0 +1,15 @@
+falco: "~/data/software/falco/bin/falco"
+ref_hg_genome: "~/data/reference/Homo_sapiens/hisat_GRCh38/GRCh38"
+ref_hg_genome_fasta: "~/data/reference/Homo_sapiens/sequences/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna" 
+
+ref_mm_genome: "~/data/reference/Mus_musculus/hisat_mm10/mm10"
+ref_mm_genome_fasta: "~/data/reference/Mus_musculus/sequences/mm10_no_alt_analysis_set_ENCODE.fasta" 
+ 
+ref_rRNA: "~/data/reference/Homo_sapiens/hisat_18S_28SrRNA/GRCh_sncRNA"
+ref_rRNA_fasta: "~/data/reference/Homo_sapiens/sequences/Homo_sapiens.GRCh38.28S.18S.fa"
+
+ref_spikein: "~/workspace/dmeseq/reference/spike_in_index"
+ref_spikein_fasta: "~/workspace/dmeseq/reference/spike_in.fa"
+
+filter_trim_reads: "~/workspace/DMN-seq/5mC_detection/workflow/scripts/filter_trim_reads.py"
+count_sites: "~/workspace/DMN-seq/5mC_detection/workflow/scripts/count_sites.py"

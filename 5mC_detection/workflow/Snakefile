@@ -1,0 +1,419 @@
+configfile: "workflow/config.yaml"
+
+
+SAMPLE=["DME", "Input"]
+BATCH=['S1']
+
+wildcard_constraints:
+    sample="DME|Input"
+
+rule all:
+    input:
+        "report_qc/report_falco_before.html",
+        "report_qc/cutadapt_PE_qc.html",
+        "report_qc/report_falco_after.html",
+        "report_qc/report_mapping_mm_genome.html",
+        "report_qc/report_mapping_hg_genome.html",
+        "count_sites_mm_genome/mm_genome_sites.tsv",
+        "count_sites_hg_genome/hg_genome_sites.tsv",
+        "count_sites_spikein/spikein_sites.tsv",
+
+rule falco_before_PE:
+    input:
+        r1="raw_data/{sample}_S1_R1_001.fastq.gz",
+        r2="raw_data/{sample}_S1_R2_001.fastq.gz",
+    output:
+        "quality_control/falco_before/{sample}_PE_R1/fastqc_report.html",
+        "quality_control/falco_before/{sample}_PE_R1/fastqc_data.txt",
+        "quality_control/falco_before/{sample}_PE_R1/summary.txt",
+        "quality_control/falco_before/{sample}_PE_R2/fastqc_report.html",
+        "quality_control/falco_before/{sample}_PE_R2/fastqc_data.txt",
+        "quality_control/falco_before/{sample}_PE_R2/summary.txt",
+    params:
+        r1="quality_control/falco_before/{sample}_PE_R1",
+        r2="quality_control/falco_before/{sample}_PE_R2",
+        falco=config["falco"]
+    resources:
+        mem_mb=8000,
+    shell:
+        """
+        {params.falco} -o {params.r1} {input.r1}
+        {params.falco} -o {params.r2} {input.r2}
+        """
+
+rule report_falco_before:
+    input:
+        expand("quality_control/falco_before/{sample}_SE/fastqc_data.txt", sample=SAMPLE) if "S2" in BATCH else [],
+        expand("quality_control/falco_before/{sample}_PE_R1/fastqc_data.txt", sample=SAMPLE) if "S1" in BATCH else [],
+        expand("quality_control/falco_before/{sample}_PE_R2/fastqc_data.txt", sample=SAMPLE) if "S1" in BATCH else [],
+    output:
+        "report_qc/report_falco_before.html",
+    threads: 2
+    resources:
+        mem_mb=8000,
+    shell:
+        "multiqc -f -m fastqc -n {output} {input}"
+
+rule cutadapt_PE:
+    input:
+        r1="raw_data/{sample}_S1_R1_001.fastq.gz",
+        r2="raw_data/{sample}_S1_R2_001.fastq.gz",
+    output:
+        out1=temp("cutadapt_PE/trimmed_{sample}_R1.fq.gz"),
+        out2=temp("cutadapt_PE/trimmed_{sample}_R2.fq.gz"),
+        report="cutadapt_PE/report/{sample}.cut1.report",
+    threads: 4
+    shell:
+        # 1. cut 3' adapter for R1 and 5' adapter for R2. 
+        # 2. leave and see how will the results be
+        """
+        cutadapt -j {threads} -e 0.2 -n 5 -O 3 -q 6 -m 30 --poly-a --trim-n\
+            -a "AGATCGGAAGAGCACACGTC" \
+            -A "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGG" \
+            -o {output.out1}  \
+            -p {output.out2}  \
+            {input.r1} {input.r2} > {output.report}
+        """
+
+
+rule trim_UMI_PE:
+    input:
+        in1="cutadapt_PE/trimmed_{sample}_R1.fq.gz",
+        in2="cutadapt_PE/trimmed_{sample}_R2.fq.gz",
+    output:
+        trimmed1="cutadapt_PE/trim_UMI/trimmed_umi_dedup_{sample}_R1.fq.gz",
+        trimmed2="cutadapt_PE/trim_UMI/trimmed_umi_dedup_{sample}_R2.fq.gz",
+        log="cutadapt_PE/report/trim_UMI_log_{sample}.txt",
+    threads: 4
+    shell:
+        """
+        cutadapt -j {threads} -m 20 -q 15,15 -u 5 -U -8 --rename='{{id}}_{{r1.cut_prefix}} {{comment}}' --nextseq-trim=20 --trim-n\
+            -o {output.trimmed1} \
+            -p {output.trimmed2} \
+            {input.in1} {input.in2}\
+            > {output.log}
+        """
+
+rule filter_and_trim_reads:
+    input:
+        r1="cutadapt_PE/trim_UMI/trimmed_umi_dedup_{sample}_R1.fq.gz",
+        r2="cutadapt_PE/trim_UMI/trimmed_umi_dedup_{sample}_R2.fq.gz",
+    output:
+        r1_trimmed="cutadapt_PE/filtered/filtered_{sample}_R1.fq.gz",
+        r2_trimmed="cutadapt_PE/filtered/filtered_{sample}_R2.fq.gz",
+    log:
+        "cutadapt_PE/logs/filtered_{sample}.log",
+    params:
+        filter_trim_reads=config['filter_trim_reads']
+    shell:
+        """
+        python {params.filter_trim_reads} {input.r1} {input.r2} {output.r1_trimmed} {output.r2_trimmed} > {log}
+        """
+
+rule report_cutadapt_PE:
+    input:
+        expand("cutadapt_PE/report/trim_UMI_log_{sample}.txt", sample=SAMPLE),
+        expand("cutadapt_PE/report/{sample}.cut1.report", sample=SAMPLE),
+    output:
+        "report_qc/cutadapt_PE_qc.html",
+    shell:
+        "multiqc -f -m cutadapt -n {output} {input}"
+
+rule falco_after_PE:
+    input:
+        r1="cutadapt_PE/filtered/filtered_{sample}_R1.fq.gz",
+        r2="cutadapt_PE/filtered/filtered_{sample}_R2.fq.gz",
+    output:
+        "quality_control/falco_after/{sample}_PE_R1/fastqc_report.html",
+        "quality_control/falco_after/{sample}_PE_R1/fastqc_data.txt",
+        "quality_control/falco_after/{sample}_PE_R1/summary.txt",
+        "quality_control/falco_after/{sample}_PE_R2/fastqc_report.html",
+        "quality_control/falco_after/{sample}_PE_R2/fastqc_data.txt",
+        "quality_control/falco_after/{sample}_PE_R2/summary.txt",
+    params:
+        r1="quality_control/falco_after/{sample}_PE_R1",
+        r2="quality_control/falco_after/{sample}_PE_R2",
+        falco=config["falco"]
+    resources:
+        mem_mb=8000,
+    shell:
+        """
+        {params.falco} -o {params.r1} {input.r1}
+        {params.falco} -o {params.r2} {input.r2}
+        """
+
+rule report_falco_after:
+    input:
+        expand("quality_control/falco_after/{sample}_SE/fastqc_data.txt", sample=SAMPLE) if "S2" in BATCH else [],
+        expand("quality_control/falco_after/{sample}_PE_R1/fastqc_data.txt", sample=SAMPLE) if "S1" in BATCH else [],
+        expand("quality_control/falco_after/{sample}_PE_R2/fastqc_data.txt", sample=SAMPLE) if "S1" in BATCH else [],
+    output:
+        "report_qc/report_falco_after.html",
+    threads: 2
+    resources:
+        mem_mb=8000,
+    shell:
+        "multiqc -f -m fastqc -n {output} {input}"
+
+rule mapping_spikein_PE:
+    input:
+        r1="cutadapt_PE/filtered/filtered_{sample}_R1.fq.gz",
+        r2="cutadapt_PE/filtered/filtered_{sample}_R2.fq.gz",
+    output:
+        bam="mapping_spikein/{sample}.spikein.bam",
+        summary="mapping_spikein/summary/{sample}.summary",
+    params:
+        ref_spikein=config["ref_spikein"],
+    threads: 4
+    shell:
+        """
+        hisat2 -p {threads}  \
+            -x {params.ref_spikein} -1 {input.r1} -2 {input.r2}\
+            --no-softclip --no-unal --no-spliced-alignment \
+            --summary-file {output.summary} --new-summary \
+            | samtools view -@ {threads} -Shub - \
+            | samtools sort -@ {threads} \
+            -o {output.bam}
+        """
+
+rule flag_sort_index_depth_spikein:
+    input:
+        "mapping_spikein/{sample}.spikein.bam",
+    output:
+        flagstat="mapping_spikein/flagstat/{sample}.spikein.flagstat",
+        depth="mapping_spikein/depth/{sample}.spikein.depth",
+        index="mapping_spikein/{sample}.spikein.bam.bai",
+    threads: 2
+    shell:
+        """
+        samtools flagstat {input} > {output.flagstat}
+        samtools depth -a -o {output.depth} -@ {threads} {input}
+        samtools index {input}
+        """
+
+rule convert_bam_to_tsv_spikein:
+    input:
+        bam="mapping_spikein/{sample}.spikein.bam",
+        index="mapping_spikein/{sample}.spikein.bam.bai",
+    output:
+        "count_sites_spikein/{sample}.spikein.sites.tsv",
+    params:
+        count_sites=config['count_sites']
+    shell:
+        """
+        python {params.count_sites} {input.bam} {output}
+        """
+
+
+rule collapse_sites_spikein:
+    input:
+        expand("count_sites_spikein/{sample}.spikein.sites.tsv", sample=SAMPLE),
+    output:
+        "count_sites_spikein/spikein_sites.tsv",
+    shell:
+        """
+        (
+        echo -e "Sample\\tChrom\\tPos_start\\tPos_End\\tRead_id\\tRead\\tStrand\\tCIGAR"
+        for file in {input}; do
+            sample=`basename $file | cut -d. -f1`
+            cat $file | awk -v samplename="$sample" 'BEGIN{{FS="\\t"; OFS="\\t"}} NR > 1 {{ print samplename,$1,$2,$3,$4,$5,$7,$8 }}'
+        done
+        ) > {output}
+        """
+
+rule mapping_hg_genome_PE:
+    input:
+        r1="cutadapt_PE/filtered/filtered_{sample}_R1.fq.gz",
+        r2="cutadapt_PE/filtered/filtered_{sample}_R2.fq.gz",
+    output:
+        bam="mapping_hg_genome/{sample}.hg_genome.bam",
+        summary="mapping_hg_genome/summary/{sample}.summary",
+    params:
+        ref_hg_genome=config["ref_hg_genome"],
+    threads: 4
+    shell:
+        """
+        hisat2 -p {threads} --time --reorder --dta --no-unal --no-spliced-alignment \
+            -x {params.ref_hg_genome} -1 {input.r1} -2 {input.r2} \
+            --summary-file {output.summary} --new-summary \
+            | samtools view -@ {threads} -Shub - \
+            | samtools sort -@ {threads} \
+            -o {output.bam}
+        """
+
+rule dedup_hg_genome:
+    input:
+        bam="mapping_hg_genome/{sample}.hg_genome.bam",
+        index="mapping_hg_genome/{sample}.hg_genome.bam.bai",
+    output:
+        bam="mapping_hg_genome/dedup/{sample}.hg_genome.dedup.bam",
+        log="mapping_hg_genome/dedup/dedup_log/{sample}.dedup.log",
+    shell:
+        "umi_tools dedup --paired --stdin={input.bam} --log={output.log} --stdout={output.bam}"
+
+rule flag_sort_index_depth_hg_genome:
+    input:
+        "mapping_hg_genome/{sample}.hg_genome.bam",
+    output:
+        flagstat="mapping_hg_genome/flagstat/{sample}.hg_genome.flagstat",
+        depth="mapping_hg_genome/depth/{sample}.hg_genome.depth",
+        index="mapping_hg_genome/{sample}.hg_genome.bam.bai",
+    shell:
+        """
+        samtools flagstat {input} > {output.flagstat}
+        samtools depth -a -o {output.depth} -@ {threads} {input}
+        samtools index {input}
+        """
+
+rule flag_sort_index_depth_hg_genome_dedup:
+    input:
+        "mapping_hg_genome/dedup/{sample}.hg_genome.dedup.bam",
+    output:
+        flagstat="mapping_hg_genome/dedup/flagstat/{sample}.hg_genome.dedup.flagstat",
+        depth="mapping_hg_genome/dedup/depth/{sample}.hg_genome.dedup.depth",
+        index="mapping_hg_genome/dedup/{sample}.hg_genome.dedup.bam.bai",
+    shell:
+        """
+        samtools flagstat {input} > {output.flagstat}
+        samtools depth -a -o {output.depth} -@ {threads} {input}
+        samtools index {input}
+        """
+
+rule report_mapping_hg_genome:
+    input:
+        expand("mapping_hg_genome/summary/{sample}.summary", sample=SAMPLE),
+        expand("mapping_hg_genome/flagstat/{sample}.hg_genome.flagstat", sample=SAMPLE),
+        expand("mapping_hg_genome/dedup/flagstat/{sample}.hg_genome.dedup.flagstat", sample=SAMPLE),
+        expand("mapping_hg_genome/dedup/dedup_log/{sample}.dedup.log", sample=SAMPLE),
+    output:
+        "report_qc/report_mapping_hg_genome.html",
+    shell:
+        "multiqc -f -n {output} {input}"
+
+rule convert_bam_to_tsv_hg_genome:
+    input:
+        bam="mapping_hg_genome/dedup/{sample}.hg_genome.dedup.bam",
+        index="mapping_hg_genome/dedup/{sample}.hg_genome.dedup.bam.bai",
+    output:
+        "count_sites_hg_genome/{sample}.hg_genome.sites.tsv",
+    params:
+        count_sites=config['count_sites']
+    shell:
+        """
+        python {params.count_sites} {input.bam} {output}
+        """
+
+rule collapse_sites_hg_genome:
+    input:
+        expand("count_sites_hg_genome/{sample}.hg_genome.sites.tsv", sample=SAMPLE),
+    output:
+        "count_sites_hg_genome/hg_genome_sites.tsv",
+    shell:
+        """
+        (
+        echo -e "Sample\\tChrom\\tPos_start\\tPos_End\\tRead_id\\tRead\\tStrand\\tCIGAR"
+        for file in {input}; do
+            sample=`basename $file | cut -d. -f1`
+            cat $file | awk -v samplename="$sample" 'BEGIN{{FS="\\t"; OFS="\\t"}} NR > 1 {{ print samplename,$1,$2,$3,$4,$5,$7,$8 }}'
+        done
+        ) > {output}
+        """
+
+rule mapping_mm_genome_PE:
+    input:
+        r1="cutadapt_PE/filtered/filtered_{sample}_R1.fq.gz",
+        r2="cutadapt_PE/filtered/filtered_{sample}_R2.fq.gz",
+    output:
+        bam="mapping_mm_genome/{sample}.mm_genome.bam",
+        summary="mapping_mm_genome/summary/{sample}.summary",
+    params:
+        ref_mm_genome=config["ref_mm_genome"],
+    threads: 4
+    shell:
+        """
+        hisat2 -p {threads} --time --reorder --dta --no-unal --no-spliced-alignment \
+            -x {params.ref_mm_genome} -1 {input.r1} -2 {input.r2} \
+            --summary-file {output.summary} --new-summary \
+            | samtools view -@ {threads} -Shub - \
+            | samtools sort -@ {threads} \
+            -o {output.bam}
+        """
+
+rule dedup_mm_genome:
+    input:
+        bam="mapping_mm_genome/{sample}.mm_genome.bam",
+        index="mapping_mm_genome/{sample}.mm_genome.bam.bai",
+    output:
+        bam="mapping_mm_genome/dedup/{sample}.mm_genome.dedup.bam",
+        log="mapping_mm_genome/dedup/dedup_log/{sample}.dedup.log",
+    shell:
+        "umi_tools dedup --paired --stdin={input.bam} --log={output.log} --stdout={output.bam}"
+
+rule report_mapping_mm_genome:
+    input:
+        expand("mapping_mm_genome/summary/{sample}.summary", sample=SAMPLE),
+        expand("mapping_mm_genome/flagstat/{sample}.mm_genome.flagstat", sample=SAMPLE),
+        expand("mapping_mm_genome/dedup/flagstat/{sample}.mm_genome.dedup.flagstat", sample=SAMPLE),
+        expand("mapping_mm_genome/dedup/dedup_log/{sample}.dedup.log", sample=SAMPLE),
+    output:
+        "report_qc/report_mapping_mm_genome.html",
+    shell:
+        "multiqc -f -n {output} {input}"
+
+rule flag_sort_index_depth_mm_genome:
+    input:
+        "mapping_mm_genome/{sample}.mm_genome.bam",
+    output:
+        flagstat="mapping_mm_genome/flagstat/{sample}.mm_genome.flagstat",
+        depth="mapping_mm_genome/depth/{sample}.mm_genome.depth",
+        index="mapping_mm_genome/{sample}.mm_genome.bam.bai",
+    threads: 4
+    shell:
+        """
+        samtools flagstat {input} > {output.flagstat}
+        samtools depth -a -o {output.depth} -@ {threads} {input}
+        samtools index {input}
+        """
+
+rule flag_sort_index_depth_mm_genome_dedup:
+    input:
+        "mapping_mm_genome/dedup/{sample}.mm_genome.dedup.bam",
+    output:
+        flagstat="mapping_mm_genome/dedup/flagstat/{sample}.mm_genome.dedup.flagstat",
+        depth="mapping_mm_genome/dedup/depth/{sample}.mm_genome.dedup.depth",
+        index="mapping_mm_genome/dedup/{sample}.mm_genome.dedup.bam.bai",
+    shell:
+        """
+        samtools flagstat {input} > {output.flagstat}
+        samtools depth -a -o {output.depth} -@ {threads} {input}
+        samtools index {input}
+        """
+
+rule convert_bam_to_tsv_mm_genome:
+    input:
+        bam="mapping_mm_genome/dedup/{sample}.mm_genome.dedup.bam",
+        index="mapping_mm_genome/dedup/{sample}.mm_genome.dedup.bam.bai",
+    output:
+        "count_sites_mm_genome/{sample}.mm_genome.sites.tsv",
+    params:
+        count_sites=config['count_sites']
+    shell:
+        """
+        python {params.count_sites} {input.bam} {output}
+        """
+
+rule collapse_sites_mm_genome:
+    input:
+        expand("count_sites_mm_genome/{sample}.mm_genome.sites.tsv", sample=SAMPLE),
+    output:
+        "count_sites_mm_genome/mm_genome_sites.tsv",
+    shell:
+        """
+        (
+        echo -e "Sample\\tChrom\\tPos_start\\tPos_End\\tRead_id\\tRead\\tStrand\\tCIGAR"
+        for file in {input}; do
+            sample=`basename $file | cut -d. -f1`
+            cat $file | awk -v samplename="$sample" 'BEGIN{{FS="\\t"; OFS="\\t"}} NR > 1 {{ print samplename,$1,$2,$3,$4,$5,$7,$8 }}'
+        done
+        ) > {output}
+        """
