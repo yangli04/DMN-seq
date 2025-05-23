@@ -1,5 +1,5 @@
 cluster:
-  mkdir -p logs/{rule} && sbatch --job-name={rule}-{wildcards} --output=logs/{rule}/out.{rule}-{wildcards}-%j --error=logs/{rule}/err.{rule}-{wildcards}-%j --account=pi-drpepper --time={resources.time} --partition={resources.partition} --nodes=1 --ntasks-per-node={threads} --mem-per-cpu={resources.mem_mb}
+  mkdir -p logs/{rule} && sbatch --job-name={rule}-{wildcards} --output=logs/{rule}/out.{rule}-{wildcards}-%j --error=logs/{rule}/err.{rule}-{wildcards}-%j --account=pi-drpepper --time={resources.time} --partition={resources.partition} --nodes=1 --ntasks-per-node={threads} --mem={resources.mem_mb}
 
 default-resources:
     - partition=caslake
