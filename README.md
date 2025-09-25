@@ -8,9 +8,9 @@ This repository contains comprehensive data processing workflows for DMN-seq (DN
 ## Installation
 
 ### Prerequisites
-- Python ≥3.7
-- Snakemake workflow management system
-- Mamba or Conda package manager
+- Python 3.10
+- Snakemake 7.32.4
+- Mamba or Conda package manager (Mamba recommended for faster dependency resolution)
 
 ### Environment Setup
 
