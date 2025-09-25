@@ -86,9 +86,6 @@ The pipeline generates structured output directories containing:
 - Statistical analysis results
 - Visualization plots and summaries
 
-## Contact
-Yang Li (The University of Chicago)
-
 ## Support
 
-For questions, issues, and comments, please refer to the repository's issue tracker or contact __Yang Li__ (yliuchicago@uchicago.edu).
+For questions, issues, and comments, please refer to the repository's issue tracker or contact __Yang Li__ (U Chicago) yliuchicago@uchicago.edu. 
