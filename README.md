@@ -88,6 +88,22 @@ The pipeline generates structured output directories containing:
 - Statistical analysis results
 - Visualization plots and summaries
 
+## Citation
+
+- cite this software
+
+  ```BibTex
+  @software{yangli_2025_dmnseq_zenodo.17211256,
+    author       = {Yang Li},
+    title        = {v1.0.0},
+    publisher = {Zenodo},
+    year         = {2025},
+    doi          = {10.5281/zenodo.17211256},
+    url          = {https://doi.org/10.5281/zenodo.17211256},
+  }
+
+  ```
+
 ## Support
 
 For questions, issues, and comments, please refer to the repository's issue tracker or contact __Yang Li__ (U Chicago) yliuchicago@uchicago.edu. 
