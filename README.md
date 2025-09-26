@@ -2,7 +2,7 @@
 
 # DMN-seq Data Processing Pipeline
 
-This repository contains comprehensive data processing workflows for DMN-seq (DNA methylation sequencing) analysis. The pipeline provides two distinct analytical approaches for methylation profiling:
+This repository contains comprehensive data processing workflows for DMN-seq analysis. The pipeline provides two distinct analytical approaches for methylation profiling:
 
 1. **5mC Detection** (`5mC_detection/`) - Quantitative detection and analysis of 5-methylcytosine modifications
 2. **Hypomethylation Enrichment** (`hypomethylation_enrichment/`) - Identification and characterization of hypomethylated regions
