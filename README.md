@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/965719200.svg)](https://doi.org/10.5281/zenodo.17211256)
+
 # DMN-seq Data Processing Pipeline
 
 This repository contains comprehensive data processing workflows for DMN-seq (DNA methylation sequencing) analysis. The pipeline provides two distinct analytical approaches for methylation profiling:
