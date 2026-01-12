@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/965719200.svg)](https://doi.org/10.5281/zenodo.17211256)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # DMN-seq Data Processing Pipeline
 
@@ -87,6 +88,10 @@ The pipeline generates structured output directories containing:
 - Methylation call files
 - Statistical analysis results
 - Visualization plots and summaries
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Citation
 
