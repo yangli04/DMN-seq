@@ -1,0 +1,23 @@
+{
+  "title": "DMN-seq Data Processing Pipeline",
+  "description": "Comprehensive data processing workflows for DMN-seq analysis, providing quantitative detection of 5-methylcytosine modifications and identification of hypomethylated regions.",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Yang Li",
+      "affiliation": "University of Chicago",
+      "orcid": ""
+    }
+  ],
+  "keywords": [
+    "DMN-seq",
+    "methylation",
+    "5mC",
+    "hypomethylation",
+    "bioinformatics",
+    "genomics",
+    "epigenetics"
+  ],
+  "upload_type": "software",
+  "access_right": "open"
+}
