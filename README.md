@@ -1,3 +1,4 @@
+[![Paper DOI](https://img.shields.io/badge/Paper-10.1186%2Fs13059--026--03991--6-blue)](https://doi.org/10.1186/s13059-026-03991-6)
 [![DOI](https://zenodo.org/badge/965719200.svg)](https://doi.org/10.5281/zenodo.17211256)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -95,7 +96,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Citation
 
-- cite this software
+If you use the method, please cite the paper:
+
+  ```BibTex
+  @article{wang2026_dmnseq,
+    author  = {Wang, Y. and Li, Y. and Ye, C. and others},
+    title   = {DMN-seq enriches DNA hypomethylated regions for biomarker discovery using 5-methylcytosine glycosylase},
+    journal = {Genome Biology},
+    year    = {2026},
+    doi     = {10.1186/s13059-026-03991-6},
+    url     = {https://doi.org/10.1186/s13059-026-03991-6}
+  }
+  ```
+
+If you use the software in this repository, please cite the software:
 
   ```BibTex
   @software{yangli_2025_dmnseq_zenodo.17211256,
